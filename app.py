@@ -2,35 +2,25 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
-import urllib.request
-import os
 
 st.set_page_config(page_title="AI Crop Recommendation System", page_icon="🌱", layout="centered")
 
 st.title("🌱 AI Powered Crop Recommendation System")
-st.write("This automated interface utilizes a Random Forest Classifier to predict ideal crop cultivation paths.")
+st.write("This interactive interface utilizes your trained machine learning model to predict ideal cultivation paths.")
 
-# 1. Automatically fetch the heavy model from Google Drive if it isn't downloaded yet
-MODEL_URL = "https://drive.google.com/file/d/1v64ALYoJqtt3QWRziw343lW-u8WgijiZ/view?usp=drive_link"
-MODEL_PATH = "crop_model.pkl"
+# Sidebar for Model Artifact Uploads to completely bypass GitHub size limits
+st.sidebar.header("📁 1. Load Your Models")
+st.sidebar.info("Upload your local files below to turn on the prediction engine.")
+uploaded_model = st.sidebar.file_uploader("Upload 'crop_model.pkl'", type=["pkl"])
+uploaded_scaler = st.sidebar.file_uploader("Upload 'scaler.pkl'", type=["pkl"])
 
-@st.cache_resource
-def load_core_engine():
-    if not os.path.exists(MODEL_PATH):
-        with st.spinner("Initializing AI Engine binaries from secure cloud storage..."):
-            # This downloads the file seamlessly in the background
-            urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
+if uploaded_model is not None and uploaded_scaler is not None:
+    # Safely load the binary artifacts directly from browser memory
+    model = joblib.load(uploaded_model)
+    scaler = joblib.load(uploaded_scaler)
+    st.sidebar.success("✅ Engine binaries activated successfully!")
     
-    # Load all local components
-    model = joblib.load(MODEL_PATH)
-    scaler = joblib.load('scaler.pkl')
-    label_encoder = joblib.load('label_encoder.pkl')
-    return model, scaler, label_encoder
-
-try:
-    model, scaler, label_encoder = load_core_engine()
-    
-    st.header("📊 Enter Environmental Metrics")
+    st.header("📊 2. Enter Environmental Metrics")
     temp = st.number_input("Temperature (°C)", min_value=0.0, max_value=50.0, value=25.0, step=0.1)
     humidity = st.number_input("Relative Humidity (%)", min_value=0.0, max_value=100.0, value=70.0, step=0.1)
     ph = st.number_input("Soil pH Level", min_value=0.0, max_value=14.0, value=6.5, step=0.1)
@@ -40,12 +30,10 @@ try:
         features = np.array([[temp, humidity, ph, rainfall]])
         scaled_features = scaler.transform(features)
         
-        # Predict and decode the name
-        prediction_encoded = model.predict(scaled_features)
-        crop_name = label_encoder.inverse_transform(prediction_encoded)
+        # Make the prediction
+        prediction = model.predict(scaled_features)
         
         st.balloons()
-        st.success(f"🌾 The recommended crop variety for these conditions is: **{crop_name[0].upper()}**")
-
-except Exception as e:
-    st.error(f"Configuration sync error: Please ensure your cloud hosting permissions are active. Details: {e}")
+        st.success(f"🌾 The recommended crop variety for these conditions is: **{prediction[0].upper()}**")
+else:
+    st.warning("👈 Missing Binaries: Please drop your 'crop_model.pkl' and 'scaler.pkl' into the sidebar upload zones to launch the interface functionality.")
