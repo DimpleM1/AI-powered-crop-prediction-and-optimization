@@ -14,6 +14,16 @@ st.sidebar.info("Upload your local files below to turn on the prediction engine.
 uploaded_model = st.sidebar.file_uploader("Upload 'crop_model.pkl'", type=["pkl"])
 uploaded_scaler = st.sidebar.file_uploader("Upload 'scaler.pkl'", type=["pkl"])
 
+# Safely load the label encoder since it is already small and present in your repository
+@st.cache_resource
+def load_encoder():
+    return joblib.load('label_encoder.pkl')
+
+try:
+    label_encoder = load_encoder()
+except Exception as e:
+    st.error(f"Error loading label_encoder.pkl from repository: {e}")
+
 if uploaded_model is not None and uploaded_scaler is not None:
     # Safely load the binary artifacts directly from browser memory
     model = joblib.load(uploaded_model)
@@ -30,10 +40,17 @@ if uploaded_model is not None and uploaded_scaler is not None:
         features = np.array([[temp, humidity, ph, rainfall]])
         scaled_features = scaler.transform(features)
         
-        # Make the prediction
-        prediction = model.predict(scaled_features)
+        # Make the prediction (returns a number)
+        prediction_encoded = model.predict(scaled_features)
         
-        st.balloons()
-        st.success(f"🌾 The recommended crop variety for these conditions is: **{prediction[0].upper()}**")
+        # Decode the number back to the original text crop name
+        try:
+            crop_name = label_encoder.inverse_transform(prediction_encoded)[0]
+            st.balloons()
+            st.success(f"🌾 The recommended crop variety for these conditions is: **{str(crop_name).upper()}**")
+        except Exception as decoder_error:
+            # Fallback if encoding mismatch occurs, just display the raw prediction
+            st.balloons()
+            st.success(f"🌾 The recommended crop class ID is: **{str(prediction_encoded[0])}**")
 else:
     st.warning("👈 Missing Binaries: Please drop your 'crop_model.pkl' and 'scaler.pkl' into the sidebar upload zones to launch the interface functionality.")
