@@ -1,4 +1,4 @@
-# 🌱 AI-Powered Crop Recommendation System
+# 🌱 AI-Powered Crop Yield Prediction and Optimization
 
 A cloud-deployed Machine Learning application built to predict the most optimal crop varieties for cultivation based on dynamic environmental metrics. This project was developed as part of my Data Visualization and Machine Learning engineering internship.
 
